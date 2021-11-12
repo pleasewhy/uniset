@@ -1,3 +1,4 @@
+#![no_std]
 #![deny(missing_docs)]
 //! A hierarchical, growable bit set with support for in-place atomic operations.
 //!
@@ -36,11 +37,16 @@
 //! assert_eq!(vec![127, 128], set.drain().collect::<Vec<_>>());
 //! assert!(set.is_empty());
 //! ```
+extern crate alloc;
+use alloc::vec::Vec;
 
-use std::{
+use core::{
     fmt, iter, mem, ops, slice,
     sync::atomic::{AtomicUsize, Ordering},
 };
+// use alloc::vec::Vec;
+// use alloc::vec;
+
 
 #[cfg(feature = "vec-safety")]
 use self::vec_safety::Layers;
@@ -949,7 +955,7 @@ impl Layer {
     /// ```
     pub fn with_capacity(cap: usize) -> Layer {
         // Create an already initialized layer of bits.
-        let mut vec = mem::ManuallyDrop::new(vec![0usize; cap]);
+        let mut vec = mem::ManuallyDrop::new(alloc::vec![0usize; cap]);
 
         Layer {
             bits: vec.as_mut_ptr(),
@@ -1316,7 +1322,7 @@ fn round_capacity_up(cap: usize) -> usize {
     }
 
     if cap > 1 << 63 {
-        return std::usize::MAX;
+        return core::usize::MAX;
     }
 
     // Cap is already a power of two.
@@ -1348,7 +1354,7 @@ where
 
 #[cfg(feature = "vec-safety")]
 mod vec_safety {
-    use std::{iter, marker, mem, ops, slice};
+    use core::{iter, marker, mem, ops, slice};
 
     /// Storage for layers.
     ///
@@ -1371,7 +1377,7 @@ mod vec_safety {
     impl<T> Layers<T> {
         /// Note: Can't be a constant function :(.
         pub fn new() -> Self {
-            let vec = mem::ManuallyDrop::new(Vec::<T>::new());
+            let vec = mem::ManuallyDrop::new(alloc::vec::Vec::<T>::new());
 
             Self {
                 data: vec.as_ptr(),
@@ -1429,10 +1435,10 @@ mod vec_safety {
         #[inline(always)]
         fn as_vec<F>(&mut self, f: F)
         where
-            F: FnOnce(&mut Vec<T>),
+            F: FnOnce(&mut alloc::vec::Vec<T>),
         {
             let mut vec = mem::ManuallyDrop::new(unsafe {
-                Vec::from_raw_parts(self.data as *mut T, self.len, self.cap)
+                alloc::vec::Vec::from_raw_parts(self.data as *mut T, self.len, self.cap)
             });
             f(&mut vec);
             self.data = vec.as_mut_ptr();
@@ -1447,7 +1453,7 @@ mod vec_safety {
     {
         fn clone(&self) -> Self {
             let vec = mem::ManuallyDrop::new(unsafe {
-                Vec::from_raw_parts(self.data as *mut T, self.len, self.cap)
+                alloc::vec::Vec::from_raw_parts(self.data as *mut T, self.len, self.cap)
             })
             .clone();
 
@@ -1503,7 +1509,7 @@ mod vec_safety {
 
     impl<T> Drop for Layers<T> {
         fn drop(&mut self) {
-            drop(unsafe { Vec::from_raw_parts(self.data as *mut T, self.len, self.cap) });
+            drop(unsafe { alloc::vec::Vec::from_raw_parts(self.data as *mut T, self.len, self.cap) });
         }
     }
 }
@@ -1535,52 +1541,52 @@ mod tests {
         assert!(set.test(1023));
         assert!(!set.test(1022));
 
-        let mut layer0 = vec![0usize; 16];
+        let mut layer0 = alloc::vec![0usize; 16];
         layer0[0] = 1 << 1;
         layer0[1] = 1;
         layer0[2] = 1 << 1;
         layer0[15] = 1 << 63;
 
-        let mut layer1 = vec![0usize; 1];
+        let mut layer1 = alloc::vec![0usize; 1];
         layer1[0] = 1 << 15 | 1 << 2 | 1 << 1 | 1;
 
-        assert_eq!(vec![&layer0[..], &layer1[..]], set.as_slice());
+        assert_eq!(alloc::vec![&layer0[..], &layer1[..]], set.as_slice());
     }
 
     #[test]
     fn test_bit_layout() {
-        assert!(bit_set_layout(0).collect::<Vec<_>>().is_empty());
+        assert!(bit_set_layout(0).collect::<alloc::vec::Vec<_>>().is_empty());
         assert_eq!(
-            vec![1],
-            bit_set_layout(64).map(|l| l.cap).collect::<Vec<_>>()
+            alloc::vec![1],
+            bit_set_layout(64).map(|l| l.cap).collect::<alloc::vec::Vec<_>>()
         );
         assert_eq!(
-            vec![2, 1],
-            bit_set_layout(128).map(|l| l.cap).collect::<Vec<_>>()
+            alloc::vec![2, 1],
+            bit_set_layout(128).map(|l| l.cap).collect::<alloc::vec::Vec<_>>()
         );
         assert_eq!(
-            vec![64, 1],
-            bit_set_layout(4096).map(|l| l.cap).collect::<Vec<_>>()
+            alloc::vec![64, 1],
+            bit_set_layout(4096).map(|l| l.cap).collect::<alloc::vec::Vec<_>>()
         );
         assert_eq!(
-            vec![65, 2, 1],
-            bit_set_layout(4097).map(|l| l.cap).collect::<Vec<_>>()
+            alloc::vec![65, 2, 1],
+            bit_set_layout(4097).map(|l| l.cap).collect::<alloc::vec::Vec<_>>()
         );
         assert_eq!(
-            vec![2, 1],
-            bit_set_layout(65).map(|l| l.cap).collect::<Vec<_>>()
+            alloc::vec![2, 1],
+            bit_set_layout(65).map(|l| l.cap).collect::<alloc::vec::Vec<_>>()
         );
         assert_eq!(
-            vec![2, 1],
-            bit_set_layout(128).map(|l| l.cap).collect::<Vec<_>>()
+            alloc::vec![2, 1],
+            bit_set_layout(128).map(|l| l.cap).collect::<alloc::vec::Vec<_>>()
         );
         assert_eq!(
-            vec![3, 1],
-            bit_set_layout(129).map(|l| l.cap).collect::<Vec<_>>()
+            alloc::vec![3, 1],
+            bit_set_layout(129).map(|l| l.cap).collect::<alloc::vec::Vec<_>>()
         );
         assert_eq!(
-            vec![65, 2, 1],
-            bit_set_layout(4097).map(|l| l.cap).collect::<Vec<_>>()
+            alloc::vec![65, 2, 1],
+            bit_set_layout(4097).map(|l| l.cap).collect::<alloc::vec::Vec<_>>()
         );
     }
 
@@ -1592,8 +1598,8 @@ mod tests {
         b.reserve(10_000);
 
         assert_ne!(
-            bit_set_layout(1_000).collect::<Vec<_>>(),
-            bit_set_layout(10_000).collect::<Vec<_>>()
+            bit_set_layout(1_000).collect::<alloc::vec::Vec<_>>(),
+            bit_set_layout(10_000).collect::<alloc::vec::Vec<_>>()
         );
     }
 
@@ -1602,14 +1608,14 @@ mod tests {
             let mut set = BitSet::new();
             set.reserve($cap);
 
-            let positions: Vec<usize> = $sample;
+            let positions: alloc::vec::Vec<usize> = $sample;
 
             for p in positions.iter().copied() {
                 set.set(p);
             }
 
             let mut drain = set.drain();
-            assert_eq!(positions, (&mut drain).collect::<Vec<_>>());
+            assert_eq!(positions, (&mut drain).collect::<alloc::vec::Vec<_>>());
 
             #[cfg(feature = "test-op-count")]
             {
@@ -1630,14 +1636,14 @@ mod tests {
             let mut set = BitSet::new();
             set.reserve($cap);
 
-            let positions: Vec<usize> = $sample;
+            let positions: alloc::vec::Vec<usize> = $sample;
 
             for p in positions.iter().copied() {
                 set.set(p);
             }
 
             let mut iter = set.iter();
-            assert_eq!(positions, (&mut iter).collect::<Vec<_>>());
+            assert_eq!(positions, (&mut iter).collect::<alloc::vec::Vec<_>>());
 
             #[cfg(feature = "test-op-count")]
             {
@@ -1649,47 +1655,47 @@ mod tests {
 
     #[test]
     fn test_drain() {
-        drain_test!(0, vec![], 0);
-        drain_test!(1024, vec![], 1);
-        drain_test!(64, vec![0], 1);
-        drain_test!(64, vec![0, 1], 2);
-        drain_test!(64, vec![0, 1, 63], 3);
-        drain_test!(128, vec![64], 3);
-        drain_test!(128, vec![0, 32, 64], 7);
-        drain_test!(4096, vec![0, 32, 64, 3030, 4095], 13);
+        drain_test!(0, alloc::vec![], 0);
+        drain_test!(1024, alloc::vec![], 1);
+        drain_test!(64, alloc::vec![0], 1);
+        drain_test!(64, alloc::vec![0, 1], 2);
+        drain_test!(64, alloc::vec![0, 1, 63], 3);
+        drain_test!(128, alloc::vec![64], 3);
+        drain_test!(128, alloc::vec![0, 32, 64], 7);
+        drain_test!(4096, alloc::vec![0, 32, 64, 3030, 4095], 13);
         drain_test!(
             1_000_000,
-            vec![0, 32, 64, 3030, 4095, 50_000, 102110, 203020, 500000, 803020, 900900],
+            alloc::vec![0, 32, 64, 3030, 4095, 50_000, 102110, 203020, 500000, 803020, 900900],
             51
         );
-        drain_test!(1_000_000, (0..1_000_000).collect::<Vec<usize>>(), 1_031_748);
+        drain_test!(1_000_000, (0..1_000_000).collect::<alloc::vec::Vec<usize>>(), 1_031_748);
         drain_test!(
             10_000_000,
-            vec![0, 32, 64, 3030, 4095, 50_000, 102110, 203020, 500000, 803020, 900900, 9_009_009],
+            alloc::vec![0, 32, 64, 3030, 4095, 50_000, 102110, 203020, 500000, 803020, 900900, 9_009_009],
             58
         );
     }
 
     #[test]
     fn test_iter() {
-        iter_test!(0, vec![], 0);
-        iter_test!(1024, vec![], 1);
-        iter_test!(64, vec![0, 2], 3);
-        iter_test!(64, vec![0, 1], 3);
-        iter_test!(128, vec![64], 4);
-        iter_test!(128, vec![0, 32, 64], 8);
-        iter_test!(4096, vec![0, 32, 64, 3030, 4095], 14);
+        iter_test!(0, alloc::vec![], 0);
+        iter_test!(1024, alloc::vec![], 1);
+        iter_test!(64, alloc::vec![0, 2], 3);
+        iter_test!(64, alloc::vec![0, 1], 3);
+        iter_test!(128, alloc::vec![64], 4);
+        iter_test!(128, alloc::vec![0, 32, 64], 8);
+        iter_test!(4096, alloc::vec![0, 32, 64, 3030, 4095], 14);
         iter_test!(
             1_000_000,
-            vec![0, 32, 64, 3030, 4095, 50_000, 102110, 203020, 500000, 803020, 900900],
+            alloc::vec![0, 32, 64, 3030, 4095, 50_000, 102110, 203020, 500000, 803020, 900900],
             52
         );
         iter_test!(
             10_000_000,
-            vec![0, 32, 64, 3030, 4095, 50_000, 102110, 203020, 500000, 803020, 900900, 9_009_009],
+            alloc::vec![0, 32, 64, 3030, 4095, 50_000, 102110, 203020, 500000, 803020, 900900, 9_009_009],
             59
         );
-        iter_test!(1_000_000, (0..1_000_000).collect::<Vec<usize>>(), 1_031_749);
+        iter_test!(1_000_000, (0..1_000_000).collect::<alloc::vec::Vec<usize>>(), 1_031_749);
     }
 
     #[test]
@@ -1700,10 +1706,10 @@ mod tests {
         assert_eq!(32, round_capacity_up(17));
         assert_eq!(32, round_capacity_up(32));
         assert_eq!(
-            (std::usize::MAX >> 1) + 1,
-            round_capacity_up(std::usize::MAX >> 1)
+            (core::usize::MAX >> 1) + 1,
+            round_capacity_up(core::usize::MAX >> 1)
         );
-        assert_eq!(std::usize::MAX, round_capacity_up((1usize << 63) + 1));
+        assert_eq!(core::usize::MAX, round_capacity_up((1usize << 63) + 1));
     }
 
     #[test]
